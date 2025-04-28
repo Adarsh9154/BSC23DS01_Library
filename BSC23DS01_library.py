@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import os
+import base64
 
 # Initialize an empty ledger as a list of dictionaries
 ledger = []
@@ -14,6 +16,9 @@ def add_book(book_name, price, author, isbn, issued_to):
         "issued_to": issued_to
     })
     st.success(f"Book '{book_name}' added successfully.")
+    # Save ledger to CSV after each addition
+    save_ledger_to_csv()
+
 
 # Function to display the ledger using a Pandas DataFrame
 def display_ledger():
@@ -21,9 +26,15 @@ def display_ledger():
     if not ledger:
         st.write("Ledger is currently empty.")
         return
-
     df = pd.DataFrame(ledger)  # Create DataFrame from ledger
     st.dataframe(df)  # Display DataFrame in Streamlit
+
+def save_ledger_to_csv():
+    df = pd.DataFrame(ledger)
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}" download="ledger.csv">Download CSV File</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 # Streamlit app
 st.title("Library Book Issuing Ledger")
