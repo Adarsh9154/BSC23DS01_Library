@@ -1,22 +1,21 @@
 import streamlit as st
 import pandas as pd
 import json
-import requests
-from github import Github
 
 # Initialize an empty ledger as a list of dictionaries
 ledger = []
 
 # Load data from GitHub if available, otherwise use an empty ledger.
 try:
-    url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/ledger.json"  # Update with your details
+    import requests
+    url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/ledger.json"  # Replace with your GitHub repo details
     response = requests.get(url)
-    response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+    response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
     ledger = json.loads(response.text)
 except (requests.exceptions.RequestException, json.JSONDecodeError, FileNotFoundError):
     st.warning("Could not load ledger from GitHub. Starting with an empty ledger.")
 
-# Function to add a book to the ledger
+# Function to add a book to the ledger with additional columns
 def add_book(book_name, price, author, isbn, issued_to):
     ledger.append({
         "book_name": book_name,
@@ -26,17 +25,32 @@ def add_book(book_name, price, author, isbn, issued_to):
         "issued_to": issued_to
     })
     st.success(f"Book '{book_name}' added successfully.")
+    # Save updated ledger to GitHub
     save_ledger_to_github()
+
+# Function to display the ledger using a Pandas DataFrame
+def display_ledger():
+    st.write("\n--- LIBRARY BOOK LEDGER ---")
+    if not ledger:
+        st.write("Ledger is currently empty.")
+        return
+    df = pd.DataFrame(ledger)  # Create DataFrame from ledger
+    st.dataframe(df)  # Display DataFrame in Streamlit
 
 # Function to save the ledger to a JSON file in GitHub
 def save_ledger_to_github():
     try:
-        github_token = "YOUR_GITHUB_TOKEN"  # Replace with your GitHub token
+        import requests
+        from github import Github
+
+        # Replace with your GitHub personal access token
+        github_token = "YOUR_GITHUB_TOKEN"
         g = Github(github_token)
-        repo = g.get_user().get_repo("YOUR_REPOSITORY")  # Replace with your repository name
+        repo = g.get_user().get_repo("YOUR_REPOSITORY") # Replace with your repository name
         contents = repo.get_contents("ledger.json", ref="main")  # Get file content
         repo.update_file(contents.path, "Update ledger", json.dumps(ledger, indent=2), contents.sha, branch="main")
         st.success("Ledger saved to GitHub successfully.")
+
     except Exception as e:
         st.error(f"Error saving ledger to GitHub: {e}")
 
@@ -56,6 +70,5 @@ if st.button("Add Book"):
         add_book(book_name, price, author, isbn, issued_to)
     else:
         st.error("Please fill in all the fields.")
-
 # Display the ledger
 display_ledger()
